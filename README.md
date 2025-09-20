@@ -1,5 +1,5 @@
 ```
-git clone abhibambhaniya/genz.git
+git clone -b env-verify https://github.com/jadewang21/GenZ-LLM-Analyzer.git
 cd GenZ-LLM-Analyzer
 conda env create -f environment.yml
 cd notebook
