@@ -19,6 +19,11 @@ class System(object):
                 parallelism_heirarchy = "TP{1}_EP{1}_PP{1}",
                 network_config = None,
                 gear_params = None,
+                # ---- 新增：分层链路 ----
+                intra_link_bw=None,           # GB/s
+                intra_link_latency=None,      # us
+                inter_link_bw=None,           # GB/s
+                inter_link_latency=None,      # us
                 ):
 
         if unit is None:
@@ -34,6 +39,16 @@ class System(object):
         self.offchip_mem_bw = self.unit.unit_to_raw(offchip_mem_bw, type='BW')
         self.interchip_link_bw = self.unit.unit_to_raw(interchip_link_bw, type='BW')
         self.interchip_link_latency = interchip_link_latency * 1e-6     ## us
+        # === 新增：存原始量级（内部统一用秒 & Bytes/s）===
+        self.intra_link_bw = (self.unit.unit_to_raw(intra_link_bw, type='BW')
+                            if intra_link_bw is not None else None)
+        self.intra_link_latency = (intra_link_latency * 1e-6
+                                if intra_link_latency is not None else None)
+        self.inter_link_bw = (self.unit.unit_to_raw(inter_link_bw, type='BW')
+                            if inter_link_bw is not None else None)
+        self.inter_link_latency = (inter_link_latency * 1e-6
+                                if inter_link_latency is not None else None)
+        
         self.external_mem_bw = self.unit.unit_to_raw(external_mem_bw, type='BW')
         self.on_chip_mem_size = self.unit.unit_to_raw(on_chip_mem_size, type='M')
         self.on_chip_mem_left_size = self.unit.unit_to_raw(on_chip_mem_size, type='M')
@@ -104,6 +119,21 @@ class System(object):
     def get_off_chip_mem_size(self):
         return self.unit.raw_to_unit(self.off_chip_mem_size,type='M')
 
+    # === 新增：getter（带回退）===
+    def get_intra_link_bw(self):
+        bw_raw = self.intra_link_bw if self.intra_link_bw is not None else self.interchip_link_bw
+        return self.unit.raw_to_unit(bw_raw, type='BW')  # -> GB/s
+
+    def get_inter_link_bw(self):
+        bw_raw = self.inter_link_bw if self.inter_link_bw is not None else self.interchip_link_bw
+        return self.unit.raw_to_unit(bw_raw, type='BW')  # -> GB/s
+
+    def get_intra_link_latency(self):
+        # 返回“秒”，与内部一致；构造 System 时再转换回“微秒”
+        return self.intra_link_latency if self.intra_link_latency is not None else self.interchip_link_latency
+
+    def get_inter_link_latency(self):
+        return self.inter_link_latency if self.inter_link_latency is not None else self.interchip_link_latency
 
     def claim_onchip_mem(self, data_sz):
         if data_sz > self.on_chip_mem_left_size:

@@ -131,6 +131,7 @@ def create_full_prefill_model(
         expert_parallel=args.get('expert_parallel',1),
         sequence_parallel=args.get('sequence_parallel',1),
         data_parallel=args.get('data_parallel',1),
+        ep_share_tp_group=args.get('ep_share_tp_group', False),
         )
 
     def add_layers(layers, num_layers):
@@ -213,6 +214,7 @@ def create_full_decode_model(
         expert_parallel=args.get('expert_parallel', 1),
         sequence_parallel=args.get('sequence_parallel', 1),
         data_parallel=args.get('data_parallel', 1),
+        ep_share_tp_group=args.get('ep_share_tp_group', False),
     )
 
     def add_layers(layers, num_layers):

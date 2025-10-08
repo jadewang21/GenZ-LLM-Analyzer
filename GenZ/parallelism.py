@@ -15,6 +15,7 @@ class ParallelismConfig():
         data_parallel=1,
         expert_parallel=1,
         sequence_parallel=1,
+        ep_share_tp_group=False,
         **kwargs,
     ):
         self.tensor_parallel = tensor_parallel
@@ -22,6 +23,9 @@ class ParallelismConfig():
         self.data_parallel = data_parallel
         self.expert_parallel = expert_parallel
         self.sequence_parallel = sequence_parallel
+        # 当为 True 且 ep==tp 时，表示 MoE 专家并行与 TP 共享同一组，
+        # 专家本身不在 TP 维度上切分；专家内不进行 FFN AR。
+        self.ep_share_tp_group = ep_share_tp_group
         self.total_chips = np.prod([
                             self.data_parallel,
                             self.expert_parallel,

@@ -16,6 +16,7 @@ def decode_moddeling(model = 'BERT', batch_size = 1, input_tokens = 4096,
     system_name = 'A100_40GB_GPU', system_eff = 1, bits='bf16', debug= False, model_profilling = False,
     tensor_parallel = 1, pipeline_parallel = 1,
     expert_parallel = 1,
+    ep_share_tp_group = False,
     collective_strategy='GenZ', network_config=None,
     parallelism_heirarchy = "TP{1}_EP{1}_PP{1}",
     model_offload = False, ceff = None, meff = None):
@@ -46,7 +47,8 @@ def decode_moddeling(model = 'BERT', batch_size = 1, input_tokens = 4096,
                                             output_gen_tokens = output_tokens ,
                                             tensor_parallel=tensor_parallel,
                                             pipeline_parallel=pipeline_parallel,
-                                            expert_parallel=expert_parallel)
+                                            expert_parallel=expert_parallel,
+                                            ep_share_tp_group=ep_share_tp_group)
 
     model_df = get_model_df(model_decode, system=system, batch_size= ub*Bb, intermediate_on_chip=True , beam_merge= (Bb > 1), beam_size= Bb, model_characterstics = True)
     summary_table = get_summary_table(model_df, unit, model_characterstics = True)

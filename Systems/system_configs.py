@@ -19,4 +19,30 @@ system_configs: Dict[str, Dict[str, Any]] = {
     "MI325X": {'Flops': 1307, 'Memory_size': 256, 'Memory_BW': 6000, 'ICN': 400 , 'real_values':True},
     # https://www.intel.com/content/www/us/en/content-details/817486/intel-gaudi-3-ai-accelerator-white-paper.html
     'Gaudi3' : {'Flops': 1835, 'Memory_size': 128, 'Memory_BW': 3675, 'ICN': 300 , 'real_values':True},
+    "RTX3090_PCIE_G4_IB100G": {
+        "Flops": 142,              # 单卡 RTX3090 TFLOPs（示例）
+        "Memory_size": 24,         # GB
+        "Memory_BW": 936,          # GB/s (GDDR6X 牌面带宽)
+        # 机内通信：PCIe Gen4（x16，单向约 16 GB/s）
+        "ICN_INTRA": 32,           # GB/s
+        "ICN_LL_INTRA": 10,         # us（主板/驱动栈时延，示例）
+        # 机外通信：IB 100Gb ≈ 12.5 GB/s 单向
+        "ICN_INTER": 12.5,         # GB/s
+        "ICN_LL_INTER": 50,         # us（端到端最小延时，示例）
+        "real_values": True
+    },
 }
+# system_configs.update({
+#     "RTX3090_PCIE_G4_IB100G": {
+#         "Flops": 142,              # 单卡 RTX3090 TFLOPs（示例）
+#         "Memory_size": 24,         # GB
+#         "Memory_BW": 936,          # GB/s (GDDR6X 牌面带宽)
+#         # 机内：PCIe Gen4（x16 约 32 GB/s 一进一出各算？保守些按 16 GB/s 单向）
+#         "ICN_INTRA": 16,           # GB/s
+#         "ICN_LL_INTRA": 2,         # us（主板/驱动栈时延，示例）
+#         # 机外：IB 100Gb ≈ 12.5 GB/s 单向
+#         "ICN_INTER": 12.5,         # GB/s
+#         "ICN_LL_INTER": 5,         # us（端到端最小延时，示例）
+#         "real_values": True
+#     }
+# })

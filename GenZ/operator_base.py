@@ -146,14 +146,33 @@ class Operator(object):
         else:
             data_size = self.communication_data() * system.get_bit_multiplier(type='M', data='a')
             if system.collective_strategy == 'GenZ':
+                def _temp_sys_with_link(bw_gbs, lat_seconds):
+                    # 注意：构造器的 latency 形参是“微秒”，这里需要 *1e6
+                    return System(unit=system.unit,
+                                interchip_link_bw=bw_gbs,
+                                interchip_link_latency=lat_seconds * 1e6)
+
+                if self.collective_type == CollectiveType.MessagePass:
+                    # 机外链路（跨节点，PP 边界）
+                    bw_gbs = system.get_inter_link_bw()
+                    lat_s = system.get_inter_link_latency()
+                    temp_sys = _temp_sys_with_link(bw_gbs, lat_s)
+                    return get_message_pass_time(data_size, temp_sys) / 1000
+
+                # 其余 AllReduce / All2All / AllGather 走机内链路
+                bw_gbs = system.get_intra_link_bw()
+                lat_s = system.get_intra_link_latency()
+                temp_sys = _temp_sys_with_link(bw_gbs, lat_s)
+
                 if self.collective_type == CollectiveType.AllReduce:
-                    return get_AR_time(data_size , self.num_collective_nodes, system) / 1000
+                    return get_AR_time(data_size , self.num_collective_nodes, temp_sys) / 1000
                 elif  self.collective_type == CollectiveType.All2All:
-                    return get_A2A_time(data_size , self.num_collective_nodes, system) / 1000
-                elif  self.collective_type == CollectiveType.MessagePass:
-                    return get_message_pass_time(data_size, system) / 1000
-                elif self.collective_type == CollectiveType.AllGather:
-                    return get_AG_time(data_size, self.num_collective_nodes, system) / 1000
+                    return get_A2A_time(data_size , self.num_collective_nodes, temp_sys) / 1000
+                elif  self.collective_type == CollectiveType.AllGather:
+                    return get_AG_time(data_size, self.num_collective_nodes, temp_sys) / 1000
+                elif self.collective_type == CollectiveType.MessagePass:
+                    # 已在上面处理；这里理论到不了
+                    return get_message_pass_time(data_size, temp_sys) / 1000
                 else:
                     raise ValueError(f'Unknown collective type: {self.collective_type}.')
             elif system.collective_strategy == 'ASTRA-SIM':

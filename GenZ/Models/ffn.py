@@ -18,6 +18,9 @@ def ffn_prefill(model_config:ModelConfig, parallelism_config:ParallelismConfig, 
     K = model_config.expert_top_k
     Df = max(ceil(Df/tp),1)
     moe_layer = (E > 1)
+    # Gate 不进行 TP 切分（vLLM 常见策略）：当 EP 与 TP 共享分组时生效
+    moe_share_tp = parallelism_config.ep_share_tp_group and (ep == tp)
+    effective_tp_for_gate = 1 if moe_share_tp else tp
 
     if E == 1 and ep > 1:
         warnings.warn(f"For dense model, expert parallelism:{ep} will be treated as model parallel")
@@ -28,9 +31,9 @@ def ffn_prefill(model_config:ModelConfig, parallelism_config:ParallelismConfig, 
 
     layers = []
     if moe_layer:
-        router = [["Gate",E, input_sequence_length//sp, D//tp, 1, 1, ResidencyInfo.All_offchip, OpType.GEMM]]
+        router = [["Gate",E, input_sequence_length//sp, D//effective_tp_for_gate, 1, 1, ResidencyInfo.All_offchip, OpType.GEMM]]
         layers += router
-        if tp > 1:
+        if tp > 1 and (not moe_share_tp):
             router_AR = [["Gate AR",input_sequence_length//sp, E, 1, 1, tp, CollectiveType.AllReduce, OpType.Sync]]
             layers += router_AR
         num_tokens_per_expert = (input_sequence_length//sp) * K // E
@@ -38,6 +41,7 @@ def ffn_prefill(model_config:ModelConfig, parallelism_config:ParallelismConfig, 
             # Total Size=Batch Size×Tokens per Batch×Hidden Dimension×Number of Experts per Token
             dispatch_all2all = [["Dispatch A2A",input_sequence_length//sp, K*D, 1, 1, ep, CollectiveType.All2All, OpType.Sync]]
             layers += dispatch_all2all
+        # 专家 FFN 仍按 TP 切分，降低单卡权重内存
         ffup =   [["up+gate",(E//ep)*Df*fi, num_tokens_per_expert, D, 1, 1, ResidencyInfo.All_offchip, OpType.GEMM]]
         ffdown = [["down",D, num_tokens_per_expert, (E//ep)*Df, 1, 1, ResidencyInfo.All_offchip, OpType.GEMM]]
 
@@ -71,6 +75,9 @@ def ffn_decode(model_config:ModelConfig, parallelism_config:ParallelismConfig):
     K = model_config.expert_top_k
     Df = max(ceil(Df/tp),1)
     moe_layer = (E > 1)
+    # Gate 不进行 TP 切分（vLLM 常见策略）：当 EP 与 TP 共享分组时生效
+    moe_share_tp = parallelism_config.ep_share_tp_group and (ep == tp)
+    effective_tp_for_gate = 1 if moe_share_tp else tp
 
     if E == 1 and ep > 1:
         warnings.warn(f"For dense model, expert parallelism:{ep} will be treated as model parallel")
@@ -81,9 +88,9 @@ def ffn_decode(model_config:ModelConfig, parallelism_config:ParallelismConfig):
 
     layers = []
     if moe_layer:
-        router = [["Gate",E, 1, D//tp, 1, 1, ResidencyInfo.All_offchip, OpType.GEMM]]
+        router = [["Gate",E, 1, D//effective_tp_for_gate, 1, 1, ResidencyInfo.All_offchip, OpType.GEMM]]
         layers += router
-        if tp > 1:
+        if tp > 1 and (not moe_share_tp):
             router_AR = [["Gate AR",1, D, 1, 1, tp, CollectiveType.AllReduce, OpType.Sync]]
             layers += router_AR
         if ep > 1:
@@ -111,7 +118,7 @@ def ffn_decode(model_config:ModelConfig, parallelism_config:ParallelismConfig):
         #   Worst case: min(5, 16//4) = 4 expert per chip
 
         ## Activated experts are distributed among EP
-        ffup =           [["up+gate",experts_activated_per_chip*Df*fi, 1, D, 1, 1, ResidencyInfo.AC_onchip, OpType.GEMM]]    ## Df is already divided
+        ffup =           [["up+gate",experts_activated_per_chip*Df*fi, 1, D, 1, 1, ResidencyInfo.AC_onchip, OpType.GEMM]]
         ffdown =           [["down",D, 1, experts_activated_per_chip*Df, 1, 1, ResidencyInfo.AC_onchip, OpType.GEMM]]
 
         ## These are unused layers but kept just for weights calculation
@@ -153,6 +160,9 @@ def deepseek_ffn_prefill(model_config:ModelConfig, parallelism_config:Parallelis
     n_shared_experts = model_config.n_shared_experts
 
     moe_layer = (E > 1)
+    # Gate 不进行 TP 切分（vLLM 常见策略）：当 EP 与 TP 共享分组时生效
+    moe_share_tp = parallelism_config.ep_share_tp_group and (ep == tp)
+    effective_tp_for_gate = 1 if moe_share_tp else tp
 
     if E == 1 and ep > 1:
         warnings.warn(f"For dense model, expert parallelism:{ep} will be treated as model parallel")
@@ -165,9 +175,9 @@ def deepseek_ffn_prefill(model_config:ModelConfig, parallelism_config:Parallelis
     if moe_layer:
         Df_moe = model_config.moe_intermediate_size
         Df_moe = max(ceil(Df_moe/tp),1)
-        router = [["Gate",E, input_sequence_length//sp, D//tp, 1, 1, ResidencyInfo.All_offchip, OpType.GEMM]]
+        router = [["Gate",E, input_sequence_length//sp, D//effective_tp_for_gate, 1, 1, ResidencyInfo.All_offchip, OpType.GEMM]]
         layers += router
-        if tp > 1:
+        if tp > 1 and (not moe_share_tp):
             router_AR = [["Gate AR",input_sequence_length//sp, E, 1, 1, tp, CollectiveType.AllReduce, OpType.Sync]]
             layers += router_AR
 

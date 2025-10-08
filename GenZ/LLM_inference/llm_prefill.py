@@ -13,6 +13,7 @@ unit = Unit()
 def prefill_moddeling(model = 'BERT', batch_size = 1, input_tokens = 4096,
     system_name = 'A100_40GB_GPU', system_eff=1, bits='bf16', debug= False, model_profilling = False,
     tensor_parallel = 1, pipeline_parallel = 1, expert_parallel = 1,
+    ep_share_tp_group = False,
     collective_strategy='GenZ', network_config=None,
     parallelism_heirarchy = "TP{1}_EP{1}_PP{1}",
     model_offload = False):
@@ -38,7 +39,8 @@ def prefill_moddeling(model = 'BERT', batch_size = 1, input_tokens = 4096,
                                                 input_sequence_length=input_tokens,
                                                 tensor_parallel=tensor_parallel,
                                                 pipeline_parallel=pipeline_parallel,
-                                                expert_parallel=expert_parallel)
+                                                expert_parallel=expert_parallel,
+                                                ep_share_tp_group=ep_share_tp_group)
 
 
     model_df = get_model_df(model_prefill, system=system, batch_size = ub, intermediate_on_chip=True , model_characterstics = True)

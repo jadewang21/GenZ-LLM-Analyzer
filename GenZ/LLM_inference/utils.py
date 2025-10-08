@@ -93,6 +93,12 @@ def get_inference_system(system_name='A100_40GB_GPU', bits='bf16', ceff=1, meff=
             per_chip_memory = system_name.get('Memory_size',2000)
             C2C_BW = system_name.get('ICN',150)
             C2C_LL = system_name.get('ICN_LL',1)
+            # ---- 新增：可选分层链路 ----
+            INTRA_BW = system_name.get('ICN_INTRA', None)
+            INTRA_LL = system_name.get('ICN_LL_INTRA', None)
+            INTER_BW = system_name.get('ICN_INTER', None)
+            INTER_LL = system_name.get('ICN_LL_INTER', None)
+            
     elif isinstance(system_name, System):
         system_name.bits = bits
         system_name.compute_efficiency = ceff
@@ -106,4 +112,9 @@ def get_inference_system(system_name='A100_40GB_GPU', bits='bf16', ceff=1, meff=
 
     return System(unit,frequency=1000 , flops=NUM_FLOPS, off_chip_mem_size=(per_chip_memory*1024), compute_efficiency=ceff, memory_efficiency=meff,
                     offchip_mem_bw=OFFCHIP_MEM_BW, bits=bits, external_mem_bw=OFFLOAD_BW, interchip_link_bw=C2C_BW, interchip_link_latency=C2C_LL, 
-                    collective_strategy=collective_strategy, network_config=network_config, parallelism_heirarchy = parallelism_heirarchy)
+                    collective_strategy=collective_strategy, network_config=network_config, parallelism_heirarchy = parallelism_heirarchy,
+                    # ---- 新增：把分层链路传进去----
+                    intra_link_bw=INTRA_BW,
+                    intra_link_latency=INTRA_LL,
+                    inter_link_bw=INTER_BW,
+                    inter_link_latency=INTER_LL)
